@@ -35,14 +35,18 @@ fn main() {
     println!("Searching for {}", config.query);
     println!("In file {}", config.path_file);
 
-    run(config);
+    if let Err(e) = run(config) {
+        println!("Application error: {e}");
+        process::exit(1);
+    }
 }
 
 // know that Box<dyn Error> means the function will return a type
 // that implements the Error trait, but we don’t have to specify
 // what particular type the return value will be. This gives us flexibility
 // to return error values that may be of different types in different error cases.
-// The dyn keyword is short for dynamic.
+//
+// The *dyn* keyword is short for dynamic.
 fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let content = fs::read_to_string(config.path_file)?;
     println!("\n{content}");
