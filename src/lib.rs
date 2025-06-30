@@ -25,8 +25,11 @@ impl Config {
 //
 // The *dyn* keyword is short for dynamic.
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let content =
+    let contents =
         fs::read_to_string(config.path_file).expect("Should have been able to read the file");
+    for line in search(&config.query, &contents) {
+        println!("{}", line)
+    }
     Ok(())
 }
 
