@@ -1,46 +1,56 @@
-use std::{char::CharTryFromError, env, process, thread, time::Duration};
+use std::{char::CharTryFromError, collections::HashMap, env, process, thread, time::Duration};
 
 use minigrep::{Config, run};
 
 struct Cacher<T>
 where
-    T: Fn(u32) -> u32,
+    T: Fn(&str) -> String,
 {
     calculation: T,
-    value: Option<u32>,
+    value: HashMap<String, String>,
 }
 
 impl<T> Cacher<T>
 where
-    T: Fn(u32) -> u32,
+    T: Fn(&str) -> String,
 {
     fn new(calculation: T) -> Cacher<T> {
         Cacher {
             calculation,
-            value: None,
+            value: HashMap::new(),
         }
     }
 
-    fn value(&mut self, arg: u32) -> u32 {
-        match self.value {
-            Some(v) => v,
-            None => {
-                let v = (self.calculation)(arg);
-                self.value = Some(v);
-                v
-            }
-        }
+    fn value(&mut self, arg: &str) -> String {
+        self.value
+            .entry(arg.to_string())
+            .or_insert_with(|| (self.calculation)(arg))
+            .clone()
+        // match self.value.get(arg) {
+        //     Some(v) => v.clone(),
+        //     None => {
+        //         let result = (self.calculation)(arg);
+        //         self.value.insert(arg.to_string(), result.clone());
+        //         result
+        //     }
+        // }
     }
 }
 
 fn main() {
-    let mut expensive_closure = Cacher::new(|num| {
+    let mut expensive_closure = Cacher::new(|s| {
         println!("calculating slowly...");
         thread::sleep(Duration::from_secs(2));
-        num
+        s.to_string()
     });
-    println!("{}", expensive_closure.value(2));
-    println!("calculate again {}", expensive_closure.value(2));
+
+    let k = &String::from("casa");
+    let a = &String::from("casa2");
+    println!("{}", expensive_closure.value(k));
+    println!("calculate again: {}", expensive_closure.value(k));
+
+    println!("{}", expensive_closure.value(a));
+    println!("calculate again: {}", expensive_closure.value(a));
 }
 
 // fn main() {
