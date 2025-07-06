@@ -1,19 +1,33 @@
-use std::{error::Error, fs, vec};
+use std::{
+    env::{self, Args},
+    error::Error,
+    fs, vec,
+};
 
 pub struct Config {
     pub query: String,
     pub path_file: String,
+    pub case_sensitive: bool,
 }
 
 impl Config {
-    pub fn build(args: &Vec<String>) -> Result<Self, &'static str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
-        }
+    pub fn build(mut args: Args) -> Result<Self, &'static str> {
+        args.next(); // the binary filename;
+        let query = match args.next() {
+            Some(query) => query,
+            None => return Err("Didn`t get a query string"),
+        };
+        let path_file = match args.next() {
+            Some(file_path) => file_path,
+            None => return Err("Didn`t get a file name"),
+        };
+
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
 
         Ok(Self {
-            query: args[1].clone(),
-            path_file: args[2].clone(),
+            query: query,
+            path_file: path_file,
+            case_sensitive: case_sensitive,
         })
     }
 }
@@ -27,7 +41,14 @@ impl Config {
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents =
         fs::read_to_string(config.path_file).expect("Should have been able to read the file");
-    for line in search(&config.query, &contents) {
+
+    let results = if config.case_sensitive {
+        search(&config.query, &contents)
+    } else {
+        search_case_insensitive(&config.query, &contents)
+    };
+
+    for line in results {
         println!("{}", line)
     }
     Ok(())
