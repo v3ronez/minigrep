@@ -15,6 +15,7 @@ where
 }
 
 #[allow(dead_code)]
+// concrate types dont have to add <T> after impl
 impl<T> Cacher<T>
 where
     T: Fn(&str) -> String,
