@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::process;
+use std::rc::Rc;
 
 use minigrep::{Config, run};
 
@@ -97,27 +98,42 @@ where
 //     println!("{}", expensive_closure.value(a));
 //     println!("calculate again: {}", expensive_closure.value(a));
 // }
+//
+// fn main() {
+//     // let args = env::args().collect::<Vec<String>>();
+//     // let args: Vec<String> = env::args().collect(); //another way to type collect
+//
+//     // one way to error handling
+//     // let config = match Config::build(&args) {
+//     //     Ok(config) => config,
+//     //     Err(err) => return println!("{}", err.to_string()),
+//     // };
+//     //
+//     let config = Config::build(env::args()).unwrap_or_else(|err| {
+//         eprintln!("Problem parsing arguments: {err}");
+//         process::exit(1);
+//     });
+//
+//     println!("Searching for {}\n", config.query);
+//     println!("In file {}\n", config.path_file);
+//
+//     if let Err(e) = run(config) {
+//         eprintln!("Application error: {e}");
+//         process::exit(1);
+//     }
+// }
+
+enum List {
+    // Cons(i32, Box<List>), //Box has a default size value "usize" so that break the loop;
+    Cons(i32, Rc<List>), //RC<T> allowed to use multi reference on the same time;
+    Nil,
+}
+use List::{Cons, Nil};
 
 fn main() {
-    // let args = env::args().collect::<Vec<String>>();
-    // let args: Vec<String> = env::args().collect(); //another way to type collect
-
-    // one way to error handling
-    // let config = match Config::build(&args) {
-    //     Ok(config) => config,
-    //     Err(err) => return println!("{}", err.to_string()),
-    // };
-    //
-    let config = Config::build(env::args()).unwrap_or_else(|err| {
-        eprintln!("Problem parsing arguments: {err}");
-        process::exit(1);
-    });
-
-    println!("Searching for {}\n", config.query);
-    println!("In file {}\n", config.path_file);
-
-    if let Err(e) = run(config) {
-        eprintln!("Application error: {e}");
-        process::exit(1);
-    }
+    let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Cons(15, Rc::new(Nil)))))));
+    // let b = Cons(3, Box::new(Nil));
+    let b = Cons(3, Rc::clone(&a));
+    let c = Cons(4, Rc::clone(&a));
+    // let c = Cons(4, Box::new(Nil));
 }
