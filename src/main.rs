@@ -1,8 +1,8 @@
 #[allow(dead_code)]
+#[allow(unused_imports)]
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::env;
-use std::process;
-use std::rc::Rc;
+use std::{env, process, rc::Rc};
 
 use minigrep::{Config, run};
 
@@ -123,17 +123,99 @@ where
 //     }
 // }
 
-enum List {
-    // Cons(i32, Box<List>), //Box has a default size value "usize" so that break the loop;
-    Cons(i32, Rc<List>), //RC<T> allowed to use multi reference on the same time;
-    Nil,
-}
-use List::{Cons, Nil};
+// enum List {
+//     // Cons(i32, Box<List>), //Box has a default size value "usize" so that break the loop;
+//     Cons(i32, Rc<List>), //RC<T> allowed to use multi reference on the same time;
+//     Nil,
+// }
+// use List::{Cons, Nil};
+//
+// fn main() {
+//     let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Cons(15, Rc::new(Nil)))))));
+//     // let b = Cons(3, Box::new(Nil));
+//     let b = Cons(3, Rc::clone(&a));
+//     let c = Cons(4, Rc::clone(&a));
+//     // let c = Cons(4, Box::new(Nil));
+// }
+//
+//
 
-fn main() {
-    let a = Rc::new(Cons(5, Rc::new(Cons(10, Rc::new(Cons(15, Rc::new(Nil)))))));
-    // let b = Cons(3, Box::new(Nil));
-    let b = Cons(3, Rc::clone(&a));
-    let c = Cons(4, Rc::clone(&a));
-    // let c = Cons(4, Box::new(Nil));
+pub trait Messager {
+    fn send(&self, msg: &str);
 }
+
+// T must implement the Messager trait.
+// ensures that any references inside T live at least as long as 'a.
+pub struct LimitTracker<'a, T: 'a + Messager> {
+    messenger: &'a T,
+    value: usize,
+    max: usize,
+}
+
+impl<'a, T> LimitTracker<'a, T>
+where
+    T: 'a + Messager,
+{
+    pub fn new(messenger: &T, max: usize) -> LimitTracker<T> {
+        LimitTracker {
+            messenger,
+            value: 0,
+            max,
+        }
+    }
+
+    pub fn set_value(&mut self, value: usize) {
+        self.value = value;
+        let percentage = self.value as f64 / self.max as f64;
+        if percentage >= 0.75 {
+            self.messenger
+                .send("Warning: You've used up over 75% of you quota!");
+            return;
+        }
+
+        if percentage >= 0.9 && percentage < 1.0 {
+            self.messenger
+                .send("Warning: You've used up over 90% of you quota!");
+            return;
+        }
+        if percentage >= 1.0 {
+            self.messenger.send("ERROR: You are over your quota!")
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    struct MockMessenger {
+        // sent_messages: Vec<String>;
+        sent_messages: RefCell<Vec<String>>,
+    }
+    impl MockMessenger {
+        pub fn new() -> Self {
+            Self {
+                // sent_messages: vec![],
+                sent_messages: RefCell::new(vec![]),
+            }
+        }
+    }
+
+    // the `fn send(&self, msg: &str)` on Message trait uses an immutable &self but in the mock I want
+    // `fn send()` to use `&mut self` so I can store all messages that were sent. To solved it use
+    // RefCell<T>
+    impl Messager for MockMessenger {
+        fn send(&self, msg: &str) {
+            self.sent_messages.borrow_mut().push(msg.to_string());
+        }
+    }
+
+    #[test]
+    fn it_sends_an_over_75_percent_warning_message() {
+        let mock_message = MockMessenger::new();
+        let mut limit_tracker = LimitTracker::new(&mock_message, 100);
+        limit_tracker.set_value(80);
+        assert_eq!(mock_message.sent_messages.borrow().len(), 1);
+    }
+}
+
+fn main() {}
